@@ -1,3 +1,7 @@
-# Review Analysis Agent Demo
+﻿# 评论分析Agent项目文件说明
 
-生活服务商家评论分析Agent
+- index.html - Demo 演示页面
+- 01_项目说明文档/ - 项目说明
+- 02_Prompt设计/ - Prompt 设计方案
+- 03_测试样例与结果/ - 测试样例与结果记录
+- 04_简历描述/ - 简历描述

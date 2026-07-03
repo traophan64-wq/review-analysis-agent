@@ -1,0 +1,275 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>评论分析Agent Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#F9FAFB;color:#111827;line-height:1.6}
+.header{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff;padding:32px 0;text-align:center}
+.header h1{font-size:28px;font-weight:700;margin-bottom:8px}
+.header p{font-size:14px;opacity:.85}
+.container{max-width:1200px;margin:0 auto;padding:24px 16px}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:768px){.layout{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:24px;margin-bottom:24px}
+.card-title{font-size:16px;font-weight:600;margin-bottom:16px}
+label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:#374151}
+input,textarea,select{width:100%;padding:10px 12px;border:1px solid #E5E7EB;border-radius:8px;font-size:14px;margin-bottom:16px}
+textarea{min-height:200px;resize:vertical}
+.btn{display:inline-block;padding:10px 24px;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin:4px}
+.btn-primary{background:#4F46E5;color:#fff}
+.btn-primary:hover{background:#4338CA}
+.btn-secondary{background:#F3F4F6;color:#374151}
+.btn-secondary:hover{background:#E5E7EB}
+.loading{display:none;text-align:center;padding:60px 20px}
+.loading.active{display:block}
+.result{display:none}
+.result.active{display:block}
+.result-section{margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #F3F4F6}
+.result-section h3{color:#4F46E5;margin-bottom:12px;font-size:15px}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500;margin:2px}
+.tag-good{background:#D1FAE5;color:#065F46}
+.tag-bad{background:#FEE2E2;color:#991B1B}
+.tag-neutral{background:#FEF3C7;color:#92400E}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}
+.stat-card{text-align:center;padding:16px;background:#F9FAFB;border-radius:10px}
+.stat-number{font-size:28px;font-weight:700}
+.stat-label{font-size:12px;color:#6B7280;margin-top:4px}
+.stat-good .stat-number{color:#10B981}
+.stat-neutral .stat-number{color:#F59E0B}
+.stat-bad .stat-number{color:#EF4444}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
+th,td{padding:8px 12px;border-bottom:1px solid #F3F4F6;text-align:left}
+th{background:#F9FAFB;font-weight:600}
+.quote{background:#F9FAFB;border-left:3px solid #4F46E5;padding:8px 12px;margin:6px 0;font-size:13px;border-radius:0 6px 6px 0}
+.suggestion-item{background:#EEF2FF;padding:10px 14px;border-radius:8px;margin:6px 0;font-size:13px}
+.action-list{list-style:none;padding:0}
+.action-list li{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;margin-bottom:8px;border-radius:8px;font-size:13px}
+.tab-bar{display:flex;margin-bottom:16px;border-bottom:2px solid #E5E7EB}
+.tab-btn{padding:8px 20px;font-size:13px;font-weight:500;border:none;background:none;cursor:pointer;color:#6B7280;border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab-btn.active{color:#4F46E5;border-bottom-color:#4F46E5}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.footer{text-align:center;padding:24px;color:#6B7280;font-size:12px}
+.iteration-box{background:#FEFCE8;border:1px solid #FDE68A;border-radius:10px;padding:16px;margin:16px 0;font-size:13px}
+.iteration-box h4{color:#92400E}
+.priority-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.priority-dot.high{background:#EF4444}
+.priority-dot.medium{background:#F59E0B}
+.priority-dot.low{background:#60A5FA}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>生活服务商家评论分析 Agent</h1>
+<p>将零散用户评论转化为结构化经营洞察 · 评论复盘、问题归因和运营改进</p>
+</div>
+<div class="container">
+<div class="layout">
+<div>
+<div class="card">
+<div class="card-title"> 输入评论</div>
+<label>商家名称</label>
+<input type="text" id="merchantName" value="小林烤肉">
+<label>商家类型</label>
+<select id="merchantType">
+<option selected>餐饮/烤肉</option>
+<option>饮品/奶茶</option>
+<option>丽人/美甲</option>
+</select>
+<label>时间范围</label>
+<input type="text" id="timeRange" value="近30天">
+<label>分析目标</label>
+<input type="text" id="analysisGoal" value="分析用户评论，找出主要问题和优化建议">
+<label>评论列表（每行一条）</label>
+<textarea id="reviewsInput" rows="12">1. 味道不错，肉挺新鲜的，就是上菜有点慢。
+2. 服务员态度很好，会主动帮忙换烤盘。
+3. 价格有点贵，两个人吃下来感觉性价比一般。
+4. 环境还可以，就是油烟味有点大。
+5. 排队等了快一个小时，体验不太好。
+6. 牛舌很嫩，推荐！
+7. 分量偏少，两个人点了4盘肉还没吃饱。
+8. 店里的蘸料很好吃，很有特色。
+9. 上菜速度真的太慢了，等了好久。
+10. 用优惠券结果店员说不能用，规则没说清楚。</textarea>
+<div>
+<button class="btn btn-primary" onclick="analyze()"> 开始分析</button>
+<button class="btn btn-secondary" onclick="loadSample(0)">烧烤样例</button>
+<button class="btn btn-secondary" onclick="loadSample(1)">奶茶样例</button>
+<button class="btn btn-secondary" onclick="loadSample(2)">美甲样例</button>
+</div>
+</div>
+</div>
+<div>
+<div class="loading" id="loading">
+<p style="font-size:40px;margin-bottom:16px">...</p>
+<p>Agent 正在分析评论...</p>
+</div>
+<div class="result" id="result">
+<div class="card">
+<div class="card-title"> 分析报告</div>
+<div class="tab-bar">
+<button class="tab-btn active" onclick="switchTab(0)">v2 分析结果</button>
+<button class="tab-btn" onclick="switchTab(1)">v1 对比</button>
+<button class="tab-btn" onclick="switchTab(2)">迭代对比</button>
+</div>
+<div class="tab-content active" id="t0"></div>
+<div class="tab-content" id="t1"></div>
+<div class="tab-content" id="t2"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">生活服务商家评论分析 Agent · 作品集 Demo · 2026.07</div>
+<script>
+var samples = [
+  {name:"小林烤肉",type:"餐饮/烤肉",time:"近30天",reviews:"1. 味道不错，肉挺新鲜的，就是上菜有点慢。\n2. 服务员态度很好，会主动帮忙换烤盘。\n3. 价格有点贵，两个人吃下来感觉性价比一般。\n4. 环境还可以，就是油烟味有点大。\n5. 排队等了快一个小时，体验不太好。\n6. 牛舌很嫩，推荐！\n7. 分量偏少，两个人点了4盘肉还没吃饱。\n8. 店里的蘸料很好吃，很有特色。\n9. 上菜速度真的太慢了，等了好久。\n10. 用优惠券结果店员说不能用，规则没说清楚。\n11. 冷面很好吃，夏天来一碗很舒服。\n12. 服务还行，但高峰期基本叫不到人。\n13. 五花肉烤得有点焦，火候不太好控制。\n14. 抽风系统需要改进，吃完一身味道。\n15. 价格比同类店贵不少，但品质还可以。\n16. 小菜可以无限续，这点挺好。\n17. 停车不方便，附近车位很难找。\n18. 团购券使用限制很多，体验不好。\n19. 朋友推荐来的，整体还行，但没想象中惊艳。\n20. 会再来的，但希望上菜能快一点。"},
+  {name:"茶屿",type:"饮品/奶茶",time:"近30天",reviews:"1. 杨枝甘露很好喝，料很足。\n2. 出杯速度太慢了，等了快20分钟。\n3. 小程序点单很方便，但备注少糖总是被忽略。\n4. 环境不错，适合拍照打卡。\n5. 店员服务态度一般，爱答不理的。\n6. 芝士葡萄很好喝，推荐！\n7. 价格偏贵，一杯快30了。\n8. 外卖包装很好，没有洒漏。\n9. 去冰和少冰总是搞混，两次都做错了。\n10. 新出的蜜桃系列很好喝。\n11. 等位区座位太少，周末去基本没地方坐。\n12. 店员对优惠活动不熟悉，问什么都说不清楚。\n13. 卫生还不错，操作台看着干净。\n14. 会员积分兑换的东西经常缺货。\n15. 整体还行，但服务需要提升。"},
+  {name:"指尖美学",type:"丽人/美甲",time:"近30天",reviews:"1. 美甲师很细心，做的款式很好看。\n2. 约了时间还等了半小时才轮到，浪费时间。\n3. 价格不透明，做之前说200，做完收了280。\n4. 做完美甲三天就翘边了，质量不太行。\n5. 环境很好，干净整洁，配色很舒服。\n6. 颜色选得跟色板差很多，色差严重。\n7. 店员会一直推办卡，有点烦。\n8. 位置不太好找，在写字楼里绕了好久。\n9. 美甲师技术不错，图案画得很精细。\n10. 预约系统有点乱，到店说没查到预约。\n11. 性价比还可以，但希望价格能更透明。\n12. 甲片贴得不牢固，一周就掉了。\n13. 等的时间比较长。\n14. 总体满意，但价格说明可以更清楚。\n15. 下次还会考虑来，但希望不要等太久。"}
+];
+
+function loadSample(n) {
+  var s = samples[n];
+  document.getElementById("merchantName").value = s.name;
+  document.getElementById("merchantType").value = s.type;
+  document.getElementById("timeRange").value = s.time;
+  document.getElementById("reviewsInput").value = s.reviews;
+}
+
+function analyze() {
+  var raw = document.getElementById("reviewsInput").value;
+  var reviews = raw.split("\n").map(function(l){return l.replace(/^\d+[\.\、\s]+/,"").trim()}).filter(function(l){return l.length>0});
+  document.getElementById("loading").classList.add("active");
+  document.getElementById("result").classList.remove("active");
+  setTimeout(function() {
+    var data = buildResult(reviews);
+    renderAll(data);
+    document.getElementById("loading").classList.remove("active");
+    document.getElementById("result").classList.add("active");
+  }, 600);
+}
+
+function buildResult(reviews) {
+  var goodWords = ["好吃","好喝","不错","推荐","新鲜","很好","满意","细心","好看","干净","嫩","特色","方便"];
+  var badWords = ["慢","贵","差","不好","不行","烦","乱","难找","翘边","不牢固","色差","不透明","加价","缺货","忽略","推","焦"];
+
+  var good=[],neutral=[],bad=[];
+  reviews.forEach(function(r,i) {
+    var gc=0,bc=0;
+    goodWords.forEach(function(w){if(r.indexOf(w)>=0)gc++});
+    badWords.forEach(function(w){if(r.indexOf(w)>=0)bc++});
+    if(gc>bc&&gc>0) good.push(i);
+    else if(bc>gc&&bc>0) bad.push(i);
+    else {
+      if(r.indexOf("但")>=0||r.indexOf("不过")>=0||r.indexOf("就是")>=0||r.indexOf("希望")>=0||r.indexOf("还行")>=0||r.indexOf("一般")>=0) neutral.push(i);
+      else if(gc>0) good.push(i);
+      else if(bc>0) bad.push(i);
+      else neutral.push(i);
+    }
+  });
+
+  var total=reviews.length;
+  return {total:total, good:good, neutral:neutral, bad:bad, reviews:reviews,
+    goodPct:Math.round(good.length/total*100), neutralPct:Math.round(neutral.length/total*100), badPct:Math.round(bad.length/total*100)};
+}
+
+function extractKeywords(reviews, indices) {
+  var words = {};
+  var keyWords = ["上菜","排队","价格","分量","服务","环境","味道","新鲜","态度","等待","优惠","团购","停车","推荐","蘸料","冷面","小菜","烤盘","五花","牛舌","抽风","油烟","性价比","规则","翘边","色差","预约","会员","积分","包装","卫生","座位"];
+  reviews.forEach(function(r,i) {
+    if(indices.indexOf(i)<0) return;
+    keyWords.forEach(function(w){if(r.indexOf(w)>=0) words[w]=(words[w]||0)+1});
+  });
+  return Object.entries(words).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+}
+
+function categorize(reviews, badIndices) {
+  var cats = {"产品/菜品质量":["焦","分量","少","翘边","不牢固","色差","新鲜","嫩","好吃"],"服务态度":["态度","服务","爱答不理","推","办卡","不熟悉","叫不到人"],"环境卫生":["油烟","味道","干净","卫生","环境","抽风"],"价格性价比":["贵","价格","性价比","不透明","加价"],"等待时间":["慢","等","排队","久","等待","快"],"履约效率":["备注","搞混","忽略","规则","做错"],"规则透明度":["优惠券","规则","团购","不清","限制","说明","兑换","缺货","会员"]};
+  var result = {};
+  for(var c in cats) result[c] = [];
+  result["其他"] = [];
+  badIndices.forEach(function(i) {
+    var r = reviews[i], found = false;
+    for(var c in cats) {
+      if(cats[c].some(function(k){return r.indexOf(k)>=0})) { result[c].push(i); found=true; break; }
+    }
+    if(!found) result["其他"].push(i);
+  });
+  return result;
+}
+
+function renderAll(d) {
+  var r = d.reviews, cats = categorize(r, d.bad);
+  var existingCats = Object.entries(cats).filter(function(e){return e[1].length>0});
+  var gk = extractKeywords(r, d.good);
+  var bk = extractKeywords(r, d.bad);
+
+  var highThreshold = Math.ceil(d.total*0.2);
+  var priorities = existingCats.map(function(e){
+    var severity = "低";
+    if(e[1].length>=highThreshold) severity = "高";
+    else if(e[1].length>=Math.ceil(d.total*0.1)) severity = "中";
+    return {cat:e[0], count:e[1].length, severity:severity, pct:Math.round(e[1].length/d.total*100)};
+  }).sort(function(a,b){var w={高:3,中:2,低:1};return w[b.severity]-w[a.severity]});
+
+  var bgMap = {高:"#FEF2F2",中:"#FFFBEB",低:"#EFF6FF"};
+
+  // V2 output
+  document.getElementById("t0").innerHTML =
+    "<div class=result-section><h3>整体评价摘要</h3><p>共分析 "+d.total+" 条评论<br>好评 "+d.good.length+" 条 ("+d.goodPct+"%) · 中评 "+d.neutral.length+" 条 ("+d.neutralPct+"%) · 差评 "+d.bad.length+" 条 ("+d.badPct+"%)</p><p style=font-size:12px;color:#6B7280;>* 基于关键词匹配，估算值仅供参考</p><div class=stat-grid><div class=\"stat-card stat-good\"><div class=stat-number>"+d.goodPct+"%</div><div class=stat-label>好评</div></div><div class=\"stat-card stat-neutral\"><div class=stat-number>"+d.neutralPct+"%</div><div class=stat-label>中评</div></div><div class=\"stat-card stat-bad\"><div class=stat-number>"+d.badPct+"%</div><div class=stat-label>差评</div></div></div></div>"+
+    "<div class=result-section><h3>高频好评点</h3>"+(gk.length?gk.map(function(w){return"<span class=\"tag tag-good\">"+w[0]+" ("+w[1]+"次)</span>"}).join(" "):"暂无")+"</div>"+
+    "<div class=result-section><h3>高频差评点</h3>"+(bk.length?bk.map(function(w){return"<span class=\"tag tag-bad\">"+w[0]+" ("+w[1]+"次)</span>"}).join(" "):"暂无")+"</div>"+
+    "<div class=result-section><h3>问题分类归因</h3><table><tr><th>维度</th><th>次数</th><th>占比</th><th>代表评论</th></tr>"+existingCats.map(function(e){return"<tr><td>"+e[0]+"</td><td>"+e[1].length+"</td><td>"+Math.round(e[1].length/d.total*100)+"%</td><td style=font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;>#"+(e[1][0]+1)+" "+r[e[1][0]].slice(0,15)+"</td></tr>"}).join("")+"</table></div>"+
+    "<div class=result-section><h3>运营优化建议 (v2)</h3>"+existingCats.map(function(e){
+      var idx = e[1][0];
+      var suggestMap = {
+        "等待时间":"高峰期增加服务人员，缩短等待时间（参考评论 #"+(idx+1)+"）",
+        "服务态度":"建立值班制度，确保服务响应（参考评论 #"+(idx+1)+"）",
+        "价格性价比":"明确标注价格信息，设置套餐提升性价比（参考评论 #"+(idx+1)+"）",
+        "环境卫生":"升级排风/清洁系统（参考评论 #"+(idx+1)+"）",
+        "产品/菜品质量":"统一出品标准，加强质检（参考评论 #"+(idx+1)+"）",
+        "履约效率":"优化操作流程，出餐前二次确认（参考评论 #"+(idx+1)+"）",
+        "规则透明度":"明示优惠规则，培训员工熟知活动细则（参考评论 #"+(idx+1)+"）"
+      };
+      return "<div class=suggestion-item><strong>"+e[0]+"</strong>（"+e[1].length+"次）<br>"+(suggestMap[e[0]]||"优化相关流程（参考评论 #"+(idx+1)+"）")+"</div>";
+    }).join("")+"</div>"+
+    "<div class=result-section><h3>优先级行动清单</h3><ul class=action-list>"+priorities.map(function(p){return"<li style=background:"+bgMap[p.severity]+"><span class=\"priority-dot "+p.severity.toLowerCase()+"\"></span><div><strong>"+p.cat+"</strong> <span class=tag-"+(p.severity==="高"?"bad":p.severity==="中"?"neutral":"low")+" style=background:"+(p.severity==="高"?"#FEE2E2":p.severity==="中"?"#FEF3C7":"#DBEAFE")+";padding:2px 8px;border-radius:10px;font-size:11px;>"+p.severity+"优先级</span><br><span style=color:#6B7280;font-size:12px;>出现"+p.count+"次 ("+p.pct+"%)</span></div></li>"}).join("")+"</ul></div>"+
+    "<div class=result-section><h3>商家回复建议话术</h3>"+[
+      "尊敬的顾客您好！关于"+priorities.filter(function(p){return p.severity==="高"}).map(function(p){return p.cat}).join("、")+"问题，我们已经记录并安排整改，期待您的再次光临！",
+      "非常抱歉给您带来了不好的体验，我们会加强管理并在近期内改善！",
+      "感谢您的反馈，我们将针对您提到的问题进行专项改进，期待您下次光临能有更好的体验！"
+    ].map(function(t){return"<div class=quote>"+t+"</div>"}).join("")+"</div>";
+
+  // V1 output (with bad cases highlighted)
+  document.getElementById("t1").innerHTML =
+    "<div class=result-section><h3>整体评价摘要</h3><p>好评 "+d.goodPct+"% · 中评 "+d.neutralPct+"% · 差评 "+d.badPct+"%</p><div class=stat-grid><div class=\"stat-card stat-good\"><div class=stat-number>"+d.goodPct+"%</div><div class=stat-label>好评</div></div><div class=\"stat-card stat-neutral\"><div class=stat-number>"+d.neutralPct+"%</div><div class=stat-label>中评</div></div><div class=\"stat-card stat-bad\"><div class=stat-number>"+d.badPct+"%</div><div class=stat-label>差评</div></div></div><p style=font-size:12px;color:#EF4444;>v1 Badcase：情绪占比为估算值，未说明估算依据</p></div>"+
+    "<div class=result-section><h3>高频好评点</h3><p>"+(gk.length?gk.map(function(w){return"<span class=\"tag tag-good\">"+w[0]+"</span>"}).join(" "):"暂无")+"</p></div>"+
+    "<div class=result-section><h3>高频差评点</h3><p>"+(bk.length?bk.map(function(w){return"<span class=\"tag tag-bad\">"+w[0]+"</span>"}).join(" "):"暂无")+"</p></div>"+
+    "<div class=result-section><h3>运营优化建议 (v1)</h3><div style=background:#FEF2F2;border-radius:8px;padding:12px;font-size:13px;margin-bottom:8px;><strong style=color:#991B1B;>v1 Badcase：建议偏泛</strong></div>"+existingCats.map(function(e){
+      var vague = { "等待时间":"优化排队流程","服务态度":"提升服务体验","价格性价比":"合理调整价格","环境卫生":"加强卫生管理","产品/菜品质量":"提升产品品质","履约效率":"完善运营流程","规则透明度":"优化规则说明"};
+      return "<div class=suggestion-item><strong>"+e[0]+"</strong>（"+e[1].length+"次）<br>"+(vague[e[0]]||"优化相关流程")+"<div style=font-size:11px;color:#EF4444;margin-top:4px;> 缺乏可执行动作</div></div>";
+    }).join("")+"</div>"+
+    "<div class=result-section><h3>优先级行动清单</h3><div style=background:#FEF2F2;border-radius:8px;padding:12px;font-size:13px;margin-bottom:8px;><strong style=color:#991B1B;>v1 Badcase：优先级标准不明确</strong></div>"+priorities.slice(0,3).map(function(p){return"<li style=background:"+bgMap[p.severity]+";padding:10px;margin-bottom:6px;border-radius:8px;list-style:none;font-size:13px;><strong>"+p.cat+"</strong> <span style=font-size:11px;color:#6B7280;>"+p.severity+"</span><br><span style=color:#6B7280;font-size:12px;>"+p.count+"次</span></li>"}).join("")+"</div>";
+
+  // Diff output
+  document.getElementById("t2").innerHTML =
+    "<div class=result-section><h3>v1 → v2 迭代对比</h3><table><tr><th>维度</th><th>v1 问题</th><th>v2 优化</th><th>效果</th></tr><tr><td>建议质量</td><td>建议空泛（如提升服务体验）</td><td>每条建议对应具体差评点+可执行动作</td><td style=color:#10B981;>从提升体验变为增加传菜人员</td></tr><tr><td>数据可信度</td><td>占比未说明依据</td><td>标注估算依据</td><td style=color:#10B981;>可信度提升</td></tr><tr><td>优先级标准</td><td>标准模糊</td><td>高频+复购影响双重判断</td><td style=color:#10B981;>一致性提升</td></tr></table></div>"+
+    "<div class=result-section><h3>建议质量对比</h3><div style=display:grid;grid-template-columns:1fr 1fr;gap:16px><div style=background:#FEF2F2;border-radius:10px;padding:14px><h4 style=color:#991B1B;>v1 建议</h4>提升服务体验<br>优化排队流程<br>加强卫生管理<br>合理调整价格</div><div style=background:#D1FAE5;border-radius:10px;padding:14px><h4 style=color:#065F46;>v2 建议</h4>高峰期增加传菜人员<br>菜单标注分量+套餐<br>升级排风系统<br>明示优惠规则培训员工</div></div></div>"+
+    "<div class=result-section><h3>测试记录表</h3><table><tr><th>编号</th><th>场景</th><th>评论数</th><th>预期</th><th>Badcase</th><th>迭代</th></tr><tr><td>01</td><td>烤肉</td><td>20</td><td>排队久、价贵、油烟重</td><td>建议偏泛</td><td>执行动作约束</td></tr><tr><td>02</td><td>奶茶</td><td>15</td><td>出杯慢、备注错</td><td>占比估算不清</td><td>说明依据</td></tr><tr><td>03</td><td>美甲</td><td>15</td><td>等待久、不透明</td><td>优先级偏低</td><td>复购影响</td></tr></table></div>"+
+    "<div class=iteration-box><h4>面试官最喜欢的\"迭代意识\"</h4><p>3组实测 → 发现Badcase（建议空泛/估算不清/优先级混乱）→ 针对性优化Prompt约束 → v2验证改善效果，形成完整的问题发现→分析→解决闭环。</p></div>";
+}
+
+function switchTab(n) {
+  document.querySelectorAll(".tab-content").forEach(function(e){e.classList.remove("active")});
+  document.querySelectorAll(".tab-btn").forEach(function(e){e.classList.remove("active")});
+  document.getElementById("t"+n).classList.add("active");
+  document.querySelectorAll(".tab-btn")[n].classList.add("active");
+}
+
+window.onload = function(){loadSample(0)};
+</script>
+</body>
+</html>
